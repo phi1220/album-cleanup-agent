@@ -1,3 +1,3 @@
-"CFBundleDisplayName" = "相册清理";
-"CFBundleName" = "相册清理";
-"NSPhotoLibraryUsageDescription" = "相册清理需要读取你授权的照片来展示预览和生成模型建议；模型明确的清理项进入待删除图库，仅在你点击全部删除后，才会请求系统删除所选照片。";
+"CFBundleDisplayName" = "ByePhoto";
+"CFBundleName" = "ByePhoto";
+"NSPhotoLibraryUsageDescription" = "ByePhoto需要读取你授权的照片来展示预览和生成模型建议；模型明确的清理项进入待删除图库，仅在你点击全部删除后，才会请求系统删除所选照片。";

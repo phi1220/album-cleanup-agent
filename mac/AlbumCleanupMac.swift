@@ -6,10 +6,10 @@ import SwiftUI
 
 #if !REVIEW_CHECKS
 @main
-struct AlbumCleanupMacApp: App {
+struct ByePhotoApp: App {
     @AppStorage(L10n.languageKey) private var appLanguage = "system"
     var body: some Scene {
-        Window(tr("相册清理"), id: "library") {
+        Window(tr("ByePhoto"), id: "library") {
             LibraryScreen()
                 .frame(minWidth: 760, minHeight: 560)
                 .tint(DesignTokens.accent)
@@ -409,7 +409,7 @@ struct LibraryScreen: View {
             if library.canReadPhotos { photoContents } else { permissionState }
         }
         .background(DesignTokens.canvas)
-        .navigationTitle(tr("相册清理"))
+        .navigationTitle(tr("ByePhoto"))
         .environment(\.locale, L10n.locale(for: appLanguage))
         .onChange(of: appLanguage) { _, _ in
             if !library.isBusy { library.status = L10n.storedStatus(library.status) }
@@ -449,7 +449,7 @@ struct LibraryScreen: View {
     private var header: some View {
         HStack(alignment: .bottom, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(tr("相册清理 / 本轮待分析 %@ 张", "\(library.unprocessedPhotos.count)")).font(.caption.monospaced()).foregroundStyle(.secondary)
+                Text(tr("ByePhoto / 本轮待分析 %@ 张", "\(library.unprocessedPhotos.count)")).font(.caption.monospaced()).foregroundStyle(.secondary)
                 Text(tab.label).font(.system(size: 28, weight: .semibold))
             }
             Spacer()

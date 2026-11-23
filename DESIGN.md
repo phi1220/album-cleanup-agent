@@ -1,6 +1,6 @@
 ---
 version: alpha
-name: Album Cleanup for macOS
+name: ByePhoto for macOS
 description: A quiet contact sheet for model-assisted review and explicit, user-confirmed Photos library cleanup.
 colors:
   primary: "#3859B8"
@@ -24,7 +24,7 @@ components:
     metadataRule: "3pt ochre edge"
 ---
 
-# Album Cleanup for macOS Design System
+# ByePhoto for macOS Design System
 
 ## Overview
 
@@ -119,3 +119,5 @@ Keep and delete use `DesignTokens.keep` / `DesignTokens.delete`, mapped to #1B6E
 - **Don't:** claim the feedback prompt trains model weights or demonstrates measured self-improvement.
 
 Language ownership: `mac/Localization.swift` resolves the persisted language and native `.lproj` resources in `mac/Resources/`. All app-owned labels, progress, errors and accessibility copy share this owner. SwiftUI native pickers own popup geometry and keyboard behavior. Language changes preserve the window model, review state and entered reasons; system-owned menus/dialogs follow macOS language settings. Existing saved system reports are translated for display without rewriting feedback or records.
+
+Brand and English copy: use **ByePhoto** in both locales, including app bundle/display names and window titles. The default README is English, with a separate README.zh-CN.md for Chinese. English documentation uses English control names and ASCII launch paths. In English mode the language picker reads Simplified Chinese; owned UI and examples must not leak Chinese copy. User-authored and model-history text retains its original language. English counters use neutral labels to avoid singular/plural errors.

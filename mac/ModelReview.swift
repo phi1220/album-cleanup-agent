@@ -302,7 +302,7 @@ struct ModelSettingsSheet: View {
             Form {
                 Picker(tr("界面语言"), selection: $appLanguage) {
                     Text(tr("跟随系统")).tag("system")
-                    Text("简体中文").tag("zh-Hans")
+                    Text(tr("简体中文")).tag("zh-Hans")
                     Text("English").tag("en")
                 }
                 TextField(tr("服务地址"), text: $baseURL)

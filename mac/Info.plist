@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleExecutable</key>
-	<string>AlbumCleanupMac</string>
+	<string>ByePhoto</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.phi1220.albumcleanup.mac</string>
 	<key>CFBundleName</key>
-	<string>相册清理</string>
+	<string>ByePhoto</string>
 	<key>CFBundleDisplayName</key>
-	<string>Photo Cleanup</string>
+	<string>ByePhoto</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleLocalizations</key>
@@ -28,6 +28,6 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>相册清理需要读取你授权的照片来展示预览和生成模型建议；模型明确的清理项进入待删除图库，仅在你点击全部删除后，才会请求系统删除所选照片。</string>
+	<string>ByePhoto reads the photos you authorize to show previews and generate model suggestions. Photos are deleted only after you choose Delete All in Pending Deletion.</string>
 </dict>
 </plist>

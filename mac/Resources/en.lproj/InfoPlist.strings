@@ -1,3 +1,3 @@
-"CFBundleDisplayName" = "Photo Cleanup";
-"CFBundleName" = "Photo Cleanup";
-"NSPhotoLibraryUsageDescription" = "Photo Cleanup reads the photos you authorize to show previews and generate model suggestions. Clear cleanup suggestions enter Pending Deletion; photos are deleted only after you choose Delete All.";
+"CFBundleDisplayName" = "ByePhoto";
+"CFBundleName" = "ByePhoto";
+"NSPhotoLibraryUsageDescription" = "ByePhoto reads the photos you authorize to show previews and generate model suggestions. Clear cleanup suggestions enter Pending Deletion; photos are deleted only after you choose Delete All.";

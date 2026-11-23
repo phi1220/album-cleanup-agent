@@ -3,7 +3,7 @@ set -eu
 
 PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 SDK_PATH=${MACOS_SDK:-$(xcrun --sdk macosx --show-sdk-path)}
-APP_DIR="$PROJECT_DIR/.build/相册清理.app"
+APP_DIR="$PROJECT_DIR/.build/ByePhoto.app"
 ARCH=$(uname -m)
 
 mkdir -p "$APP_DIR/Contents/MacOS"
@@ -14,7 +14,7 @@ swiftc \
     -target "$ARCH-apple-macosx15.0" \
     -module-cache-path "$PROJECT_DIR/.build/swift-module-cache" \
     -parse-as-library \
-    -o "$APP_DIR/Contents/MacOS/AlbumCleanupMac" \
+    -o "$APP_DIR/Contents/MacOS/ByePhoto" \
     "$PROJECT_DIR/mac/AlbumCleanupMac.swift" \
     "$PROJECT_DIR/mac/ModelReview.swift" \
     "$PROJECT_DIR/mac/PreferenceLearning.swift" \
