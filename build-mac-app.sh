@@ -7,6 +7,7 @@ APP_DIR="$PROJECT_DIR/.build/相册清理.app"
 ARCH=$(uname -m)
 
 mkdir -p "$APP_DIR/Contents/MacOS"
+mkdir -p "$APP_DIR/Contents/Resources"
 mkdir -p "$PROJECT_DIR/.build/swift-module-cache"
 swiftc \
     -sdk "$SDK_PATH" \
@@ -18,8 +19,10 @@ swiftc \
     "$PROJECT_DIR/mac/ModelReview.swift" \
     "$PROJECT_DIR/mac/PreferenceLearning.swift" \
     "$PROJECT_DIR/mac/ReviewProtocol.swift" \
+    "$PROJECT_DIR/mac/Localization.swift" \
     -framework SwiftUI -framework Photos -framework AppKit -framework Security
 cp "$PROJECT_DIR/mac/Info.plist" "$APP_DIR/Contents/Info.plist"
+cp -R "$PROJECT_DIR/mac/Resources/." "$APP_DIR/Contents/Resources/"
 codesign --force --deep --sign - "$APP_DIR"
 
 printf 'Built app: %s\n' "$APP_DIR"

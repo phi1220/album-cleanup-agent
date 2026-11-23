@@ -7,11 +7,13 @@ import SwiftUI
 #if !REVIEW_CHECKS
 @main
 struct AlbumCleanupMacApp: App {
+    @AppStorage(L10n.languageKey) private var appLanguage = "system"
     var body: some Scene {
-        Window("相册清理", id: "library") {
+        Window(tr("相册清理"), id: "library") {
             LibraryScreen()
                 .frame(minWidth: 760, minHeight: 560)
                 .tint(DesignTokens.accent)
+                .environment(\.locale, L10n.locale(for: appLanguage))
         }
         .windowResizability(.contentMinSize)
     }
@@ -35,7 +37,7 @@ final class PhotoLibraryModel {
     private let storeURL: URL
     private var analysisTask: Task<Void, Never>?
     private static let logger = Logger(subsystem: "com.phi1220.albumcleanup.mac", category: "workflow")
-    var status = "点击“分析全部”，模型自动处理明确的去留，只需审核不确定的照片。" {
+    var status = tr("点击“分析全部”，模型自动处理明确的去留，只需审核不确定的照片。") {
         didSet { Self.logger.info("\(self.status, privacy: .public)") }
     }
 
@@ -44,7 +46,7 @@ final class PhotoLibraryModel {
             .appendingPathComponent("AlbumCleanup/review-memory.json")
         do { memory = try ReviewMemory.load(from: storeURL) }
         catch {
-            storageError = "无法读取审核记录，已停止写入以保护原记录：\(error.localizedDescription)"
+            storageError = tr("无法读取审核记录，已停止写入以保护原记录：%@", "\(error.localizedDescription)")
             status = storageError!
         }
     }
@@ -66,7 +68,7 @@ final class PhotoLibraryModel {
     private func commit(_ updated: ReviewMemory) throws {
         if let storageError { throw ReviewError.message(storageError) }
         do { try updated.save(to: storeURL) }
-        catch { storageError = "保存审核记录失败：\(error.localizedDescription)"; throw error }
+        catch { storageError = tr("保存审核记录失败：%@", "\(error.localizedDescription)"); throw error }
         memory = updated
     }
 
@@ -84,9 +86,9 @@ final class PhotoLibraryModel {
                     ReviewProtocol.BatchMetadata(date: $0.creationDate, burstID: $0.burstIdentifier)
                 })
                 func progress() -> String {
-                    "本次已完成 \(completed)/\(assets.count) 张" + (failed > 0 ? "，未完成 \(failed) 张" : "")
+                    tr("本次已完成 %@/%@ 张", "\(completed)", "\(assets.count)") + (failed > 0 ? tr("，未完成 %@ 张", "\(failed)") : "")
                 }
-                status = "本次 \(assets.count) 张，共 \(ranges.count) 批，最多同时处理 \(ReviewProtocol.concurrentBatches) 批…"
+                status = tr("本次 %@ 张，共 %@ 批，最多同时处理 %@ 批…", "\(assets.count)", "\(ranges.count)", "\(ReviewProtocol.concurrentBatches)")
                 try await ReviewProtocol.forEachBatch(count: ranges.count) { index in
                     let batch = Array(assets[ranges[index]])
                     let result = try await self.analyzeBatch(configuration: configuration, assets: batch,
@@ -94,12 +96,12 @@ final class PhotoLibraryModel {
                     completed += result.completed
                     failed += result.failed
                     if !result.error.isEmpty { lastError = result.error }
-                    self.status = "\(progress())；已结束第 \(index + 1)/\(ranges.count) 批。"
+                    self.status = tr("%@；已结束第 %@/%@ 批。", "\(progress())", "\(index + 1)", "\(ranges.count)")
                 }
-                status = "完成 \(completed) 张：待删除 \(queuePhotos.count) 张，需你判断 \(uncertainPhotos.count) 张。"
-                    + (failed > 0 ? "另有 \(failed) 张未完成，可再次点击分析重试。\(lastError)" : "其余自动保留。")
+                status = tr("完成 %@ 张：待删除 %@ 张，需你判断 %@ 张。", "\(completed)", "\(queuePhotos.count)", "\(uncertainPhotos.count)")
+                    + (failed > 0 ? tr("另有 %@ 张未完成，可再次点击分析重试。%@", "\(failed)", "\(lastError)") : tr("其余自动保留。"))
             } catch {
-                status = Task.isCancelled ? "已取消；已完成 \(completed) 张的结果已保存，可继续分析剩余照片。" : "分析停止：\(error.localizedDescription)"
+                status = Task.isCancelled ? tr("已取消；已完成 %@ 张的结果已保存，可继续分析剩余照片。", "\(completed)") : tr("分析停止：%@", "\(error.localizedDescription)")
             }
         }
     }
@@ -113,15 +115,15 @@ final class PhotoLibraryModel {
         var snapshots: [String: AssetSnapshot] = [:]
         for (index, asset) in assets.enumerated() {
             try Task.checkCancellation()
-            status = "\(progress())；第 \(number)/\(total) 批准备 \(index + 1)/\(assets.count) 张…"
+            status = tr("%@；第 %@/%@ 批准备 %@/%@ 张…", "\(progress())", "\(number)", "\(total)", "\(index + 1)", "\(assets.count)")
             let image: NSImage
             do {
                 image = try await PhotoImages.preview(asset, size: 768) { value in
-                    self.status = "\(progress())；第 \(number)/\(total) 批第 \(index + 1) 张，iCloud 下载 \(Int(value * 100))%…"
+                    self.status = tr("%@；第 %@/%@ 批第 %@ 张，iCloud 下载 %@%%…", "\(progress())", "\(number)", "\(total)", "\(index + 1)", "\(Int(value * 100))")
                 }
             } catch {
                 try Task.checkCancellation()
-                status = "第 \(number) 批第 \(index + 1) 张未能读取：\(error.localizedDescription)；保留待重试。"
+                status = tr("第 %@ 批第 %@ 张未能读取：%@；保留待重试。", "\(number)", "\(index + 1)", "\(error.localizedDescription)")
                 continue
             }
             let data = try PhotoImages.jpeg(image)
@@ -135,7 +137,7 @@ final class PhotoLibraryModel {
         let requestStarted = ContinuousClock.now
         Self.logger.info("第 \(number) 批准备 \(prepared.count) 张耗时 \(String(describing: started.duration(to: requestStarted)), privacy: .public)")
         do {
-            status = "\(progress())；第 \(number)/\(total) 批 \(prepared.count) 张正在上传和分析…"
+            status = tr("%@；第 %@/%@ 批 %@ 张正在上传和分析…", "\(progress())", "\(number)", "\(total)", "\(prepared.count)")
             let response = try await VisionModel.request(configuration: configuration, content: content,
                 instruction: ReviewProtocol.instruction + memory.preferencePrompt
                     + (memory.learning?.guidance(for: memory.latestFeedback, model: configuration.learningIdentity) ?? ""))
@@ -144,7 +146,7 @@ final class PhotoLibraryModel {
             let fresh = PHAsset.fetchAssets(withLocalIdentifiers: prepared.map(\.localIdentifier), options: nil)
             var current: [String: AssetSnapshot] = [:]
             fresh.enumerateObjects { asset, _, _ in current[asset.localIdentifier] = AssetSnapshot(asset) }
-            guard current == snapshots else { throw ReviewError.message("分析期间照片或授权发生变化，请刷新重试。") }
+            guard current == snapshots else { throw ReviewError.message(tr("分析期间照片或授权发生变化，请刷新重试。")) }
             // Merge into the latest memory: another batch may have finished during the request.
             var updated = memory
             for item in advice {
@@ -157,7 +159,7 @@ final class PhotoLibraryModel {
             return (prepared.count, assets.count - prepared.count, "")
         } catch {
             try Task.checkCancellation()
-            status = "第 \(number) 批未完成：\(error.localizedDescription)"
+            status = tr("第 %@ 批未完成：%@", "\(number)", "\(error.localizedDescription)")
             if case ReviewError.serviceStatus(let code) = error, [401, 403, 404, 429].contains(code) { throw error }
             if storageError != nil { throw error }
             return (0, assets.count, error.localizedDescription)
@@ -173,7 +175,7 @@ final class PhotoLibraryModel {
             var updated = memory
             try updated.record(ids, action: decision, reason: reason)
             try commit(updated)
-            status = decision == .keep ? "已保留/复活 \(ids.count) 张，反馈已记入偏好 v\(memory.preferenceVersion)。" : "已加入待删除图库，反馈已记入偏好 v\(memory.preferenceVersion)。"
+            status = decision == .keep ? tr("已保留/复活 %@ 张，反馈已记入偏好 v%@。", "\(ids.count)", "\(memory.preferenceVersion)") : tr("已加入待删除图库，反馈已记入偏好 v%@。", "\(memory.preferenceVersion)")
             loadPhotos()
             return true
         } catch { status = error.localizedDescription; return false }
@@ -183,7 +185,7 @@ final class PhotoLibraryModel {
         guard !isBusy else { return }
         do {
             if let storageError { throw ReviewError.message(storageError) }
-            guard canReadPhotos, ids.isSubset(of: pendingDeletion) else { throw ReviewError.message("权限或待删除范围已变化，请刷新。") }
+            guard canReadPhotos, ids.isSubset(of: pendingDeletion) else { throw ReviewError.message(tr("权限或待删除范围已变化，请刷新。")) }
             let relevantIDs = Set(reviews.keys).union(reviews.values.compactMap(\.keeperAssetID))
             let fetched = PHAsset.fetchAssets(withLocalIdentifiers: Array(relevantIDs), options: nil)
             var current: [String: AssetSnapshot] = [:]
@@ -193,23 +195,23 @@ final class PhotoLibraryModel {
                 if ids.contains(asset.localIdentifier) { assets.append(asset) }
             }
             try ReviewProtocol.validateDeletion(ids, reviews: reviews, current: current)
-            guard assets.allSatisfy({ $0.canPerform(.delete) }) else { throw ReviewError.message("部分照片不支持删除，请检查图库。") }
+            guard assets.allSatisfy({ $0.canPerform(.delete) }) else { throw ReviewError.message(tr("部分照片不支持删除，请检查图库。")) }
             try memory.save(to: storeURL)
             isDeleting = true
-            status = "正在请求系统删除 \(assets.count) 张照片…"
+            status = tr("正在请求系统删除 %@ 张照片…", "\(assets.count)")
             PHPhotoLibrary.shared().performChanges({ PHAssetChangeRequest.deleteAssets(assets as NSArray) }) { success, error in
                 Task { @MainActor in
                     self.isDeleting = false
                     if success {
                         var updated = self.memory
                         do { try updated.record(ids, action: .cleanup, reason: reason) }
-                        catch { self.status = "系统删除已完成，但生成反馈失败：\(error.localizedDescription)"; return }
+                        catch { self.status = tr("系统删除已完成，但生成反馈失败：%@", "\(error.localizedDescription)"); return }
                         for id in ids { updated.reviews.removeValue(forKey: id); updated.decisions.removeValue(forKey: id) }
                         do { try self.commit(updated) }
-                        catch { self.status = "系统删除已完成，但保存记录失败：\(error.localizedDescription)"; return }
+                        catch { self.status = tr("系统删除已完成，但保存记录失败：%@", "\(error.localizedDescription)"); return }
                         self.loadPhotos()
-                        self.status = "已删除 \(ids.count) 张，可在系统“照片”的“最近删除”中恢复。"
-                    } else { self.status = "删除未完成：\(error?.localizedDescription ?? "系统取消")。待删除记录已保留。" }
+                        self.status = tr("已删除 %@ 张，可在系统“照片”的“最近删除”中恢复。", "\(ids.count)")
+                    } else { self.status = tr("删除未完成：%@。待删除记录已保留。", "\(error?.localizedDescription ?? tr("系统取消"))") }
                 }
             }
         } catch { status = error.localizedDescription }
@@ -218,7 +220,7 @@ final class PhotoLibraryModel {
     private func updateLearning(configuration: ModelConfiguration) async throws {
         let feedback = memory.latestFeedback
         guard !feedback.isEmpty else { return }
-        status = "正在将全部有效反馈压缩为长期偏好…"
+        status = tr("正在将全部有效反馈压缩为长期偏好…")
         var state = memory.learning ?? PreferenceLearning()
         let request: PreferenceLearner.Request = { content, instruction in
             let started = ContinuousClock.now
@@ -243,7 +245,7 @@ final class PhotoLibraryModel {
         var updated = memory
         updated.learning = state
         try commit(updated)
-        status = "长期偏好已保存；正在检查并回放评估进化候选，可取消…"
+        status = tr("长期偏好已保存；正在检查并回放评估进化候选，可取消…")
         do {
             state = try await PreferenceLearner.evolve(state, feedback: feedback,
                 model: configuration.learningIdentity, request: request) { item in
@@ -252,7 +254,7 @@ final class PhotoLibraryModel {
                     let image: NSImage
                     do {
                         image = try await PhotoImages.preview(asset, size: 768) { value in
-                            self.status = "自进化验证照片：iCloud 下载 \(Int(value * 100))%…"
+                            self.status = tr("自进化验证照片：iCloud 下载 %@%%…", "\(Int(value * 100))")
                         }
                     } catch {
                         try Task.checkCancellation()
@@ -269,7 +271,7 @@ final class PhotoLibraryModel {
         } catch {
             try Task.checkCancellation()
             state = memory.learning ?? state
-            state.status = "进化未完成：\(error.localizedDescription)；长期偏好已保存，现有策略不变，可重试。"
+            state.status = tr("进化未完成：%@；长期偏好已保存，现有策略不变，可重试。", "\(error.localizedDescription)")
         }
         try Task.checkCancellation()
         updated = memory; updated.learning = state
@@ -286,9 +288,9 @@ final class PhotoLibraryModel {
                 defer { isLearning = false; analysisTask = nil }
                 do {
                     try await updateLearning(configuration: configuration)
-                    status = memory.learning?.status ?? "还没有可归纳的用户反馈。"
+                    status = L10n.storedStatus(memory.learning?.status ?? tr("还没有可归纳的用户反馈。"))
                 } catch {
-                    status = Task.isCancelled ? "已取消学习；已保存的长期记忆仍保留。" : "偏好更新失败：\(error.localizedDescription)"
+                    status = Task.isCancelled ? tr("已取消学习；已保存的长期记忆仍保留。") : tr("偏好更新失败：%@", "\(error.localizedDescription)")
                 }
             }
         } catch { status = error.localizedDescription }
@@ -300,7 +302,7 @@ final class PhotoLibraryModel {
             var updated = memory
             updated.learning?.rollback()
             try commit(updated)
-            status = updated.learning?.status ?? "当前使用基础策略。"
+            status = L10n.storedStatus(updated.learning?.status ?? tr("当前使用基础策略。"))
         } catch { status = error.localizedDescription }
     }
 
@@ -310,7 +312,7 @@ final class PhotoLibraryModel {
             var updated = memory
             updated.feedback = []; updated.learning = nil; updated.preferenceVersion += 1
             try commit(updated)
-            status = "已清空偏好反馈，现有去留结果仍保留。"
+            status = tr("已清空偏好反馈，现有去留结果仍保留。")
         } catch { status = error.localizedDescription }
     }
 
@@ -342,8 +344,8 @@ final class PhotoLibraryModel {
         updated.reviews = updated.reviews.filter { _, review in review.keeperAssetID.map { updated.reviews[$0] != nil } ?? true }
         updated.decisions = updated.decisions.filter { updated.reviews[$0.key] != nil }
         if updated.reviews.count != reviews.count {
-            do { try commit(updated); status = "照片或授权变化，失效建议已移除；可分析未处理的照片。" }
-            catch { status = "保存记录失败：\(error.localizedDescription)" }
+            do { try commit(updated); status = tr("照片或授权变化，失效建议已移除；可分析未处理的照片。") }
+            catch { status = tr("保存记录失败：%@", "\(error.localizedDescription)") }
         }
 
         // Keep unfinished assets, then top up from all accessible unanalyzed images.
@@ -360,15 +362,16 @@ final class PhotoLibraryModel {
             var updated = memory
             updated.roundIDs = nextIDs
             do { try commit(updated) }
-            catch { status = "保存待分析照片失败：\(error.localizedDescription)"; return }
-            status += nextIDs.isEmpty ? " 全部可访问照片已分析完成。"
-                : " 已载入 \(nextIDs.count) 张待分析照片\(nextIDs.count < ReviewProtocol.libraryLimit ? "，当前可访问的未分析照片不足 100 张" : "")。"
+            catch { status = tr("保存待分析照片失败：%@", "\(error.localizedDescription)"); return }
+            status += nextIDs.isEmpty ? tr(" 全部可访问照片已分析完成。")
+                : tr(" 已载入 %@ 张待分析照片%@。", "\(nextIDs.count)", "\(nextIDs.count < ReviewProtocol.libraryLimit ? tr("，当前可访问的未分析照片不足 100 张") : "")")
         }
         photos = nextIDs.compactMap { accessibleAssets[$0] }
     }
 }
 
 struct LibraryScreen: View {
+    @AppStorage(L10n.languageKey) private var appLanguage = "system"
     @State private var library = PhotoLibraryModel()
     @Environment(\.scenePhase) private var scenePhase
     @State private var showSettings = false
@@ -380,7 +383,16 @@ struct LibraryScreen: View {
     @State private var restoreReason = ""
     @State private var deleteReason = ""
 
-    enum LibraryTab: String, CaseIterable { case library = "图库", uncertain = "需你判断", queue = "待删除图库" }
+    enum LibraryTab: String, CaseIterable {
+        case library, uncertain, queue
+        var label: String {
+            switch self {
+            case .library: tr("图库")
+            case .uncertain: tr("需你判断")
+            case .queue: tr("待删除图库")
+            }
+        }
+    }
     private struct ReviewSession: Identifiable { let id = UUID(); let assets: [PHAsset] }
     private var visiblePhotos: [PHAsset] {
         switch tab {
@@ -397,6 +409,11 @@ struct LibraryScreen: View {
             if library.canReadPhotos { photoContents } else { permissionState }
         }
         .background(DesignTokens.canvas)
+        .navigationTitle(tr("相册清理"))
+        .environment(\.locale, L10n.locale(for: appLanguage))
+        .onChange(of: appLanguage) { _, _ in
+            if !library.isBusy { library.status = L10n.storedStatus(library.status) }
+        }
         .task { library.refreshAuthorization() }
         .onChange(of: scenePhase) { _, phase in if phase == .active { library.refreshAuthorization() } }
         .onChange(of: library.isAnalyzing) { wasAnalyzing, analyzing in
@@ -412,13 +429,13 @@ struct LibraryScreen: View {
         }
         .sheet(isPresented: $showRestore) {
             VStack(alignment: .leading, spacing: 18) {
-                Text("复活 \(restoreSelection.count) 张照片").font(.title2.bold())
-                Text("这些照片会移回保留图库。你的选择和可选理由会记入后续模型提示。")
-                TextField("理由（选填）", text: $restoreReason, axis: .vertical).lineLimit(2...4)
+                Text(tr("复活 %@ 张照片", "\(restoreSelection.count)")).font(.title2.bold())
+                Text(tr("这些照片会移回保留图库。你的选择和可选理由会记入后续模型提示。"))
+                TextField(tr("理由（选填）"), text: $restoreReason, axis: .vertical).lineLimit(2...4)
                 HStack {
-                    Button("取消") { showRestore = false }.keyboardShortcut(.cancelAction)
+                    Button(tr("取消")) { showRestore = false }.keyboardShortcut(.cancelAction)
                     Spacer()
-                    Button("复活并记住反馈") {
+                    Button(tr("复活并记住反馈")) {
                         if library.decide(restoreSelection, decision: .keep, reason: restoreReason) {
                             restoreSelection = []; restoreReason = ""; showRestore = false
                         }
@@ -432,13 +449,13 @@ struct LibraryScreen: View {
     private var header: some View {
         HStack(alignment: .bottom, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("相册清理 / 本轮待分析 \(library.unprocessedPhotos.count) 张").font(.caption.monospaced()).foregroundStyle(.secondary)
-                Text(tab.rawValue).font(.system(size: 28, weight: .semibold))
+                Text(tr("相册清理 / 本轮待分析 %@ 张", "\(library.unprocessedPhotos.count)")).font(.caption.monospaced()).foregroundStyle(.secondary)
+                Text(tab.label).font(.system(size: 28, weight: .semibold))
             }
             Spacer()
-            Button("刷新") { library.reload() }.disabled(library.isBusy).keyboardShortcut("r", modifiers: .command)
-            Button("偏好记录（\(library.feedbackCount)）") { showPreferences = true }.disabled(library.isBusy)
-            Button("模型设置") { showSettings = true }.disabled(library.isBusy)
+            Button(tr("刷新")) { library.reload() }.disabled(library.isBusy).keyboardShortcut("r", modifiers: .command)
+            Button(tr("偏好记录（%@）", "\(library.feedbackCount)")) { showPreferences = true }.disabled(library.isBusy)
+            Button(tr("模型设置")) { showSettings = true }.disabled(library.isBusy)
         }.padding(.horizontal, 32).padding(.top, 28).padding(.bottom, 22)
     }
 
@@ -448,49 +465,49 @@ struct LibraryScreen: View {
                 if library.isBusy { ProgressView().controlSize(.small) }
                 Text(library.status).font(.callout).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
                 if library.isAnalyzing || library.isLearning {
-                    Button(library.isLearning ? "取消学习" : "取消分析") { library.cancelAnalysis() }
+                    Button(library.isLearning ? tr("取消学习") : tr("取消分析")) { library.cancelAnalysis() }
                 }
             }.padding(.horizontal, 32).padding(.vertical, 14).background(DesignTokens.surface)
             VStack(spacing: 14) {
-                Picker("照片分区", selection: $tab) {
-                    Text("图库").tag(LibraryTab.library)
-                    Text("需你判断（\(library.uncertainPhotos.count)）").tag(LibraryTab.uncertain)
-                    Text("待删除图库（\(library.queuePhotos.count)）").tag(LibraryTab.queue)
+                Picker(tr("照片分区"), selection: $tab) {
+                    Text(tr("图库")).tag(LibraryTab.library)
+                    Text(tr("需你判断（%@）", "\(library.uncertainPhotos.count)")).tag(LibraryTab.uncertain)
+                    Text(tr("待删除图库（%@）", "\(library.queuePhotos.count)")).tag(LibraryTab.queue)
                 }.pickerStyle(.segmented)
                 HStack(spacing: 12) {
                     if tab == .queue {
-                        Button("复活所选（\(restoreSelection.count)）") { restoreReason = ""; showRestore = true }
+                        Button(tr("复活所选（%@）", "\(restoreSelection.count)")) { restoreReason = ""; showRestore = true }
                             .buttonStyle(.borderedProminent).tint(DesignTokens.keep)
                             .disabled(restoreSelection.isEmpty || library.isBusy)
                         Spacer()
-                        Button("全部删除（\(library.queuePhotos.count)）", role: .destructive) {
+                        Button(tr("全部删除（%@）", "\(library.queuePhotos.count)"), role: .destructive) {
                             library.deleteReviewed(Set(library.queuePhotos.map(\.localIdentifier)), reason: deleteReason)
                         }.buttonStyle(.borderedProminent).tint(DesignTokens.delete)
                             .disabled(library.queuePhotos.isEmpty || library.isBusy)
                     } else {
-                        Button("分析全部（\(library.unprocessedPhotos.count)）") { prepareAnalysis() }
+                        Button(tr("分析全部（%@）", "\(library.unprocessedPhotos.count)")) { prepareAnalysis() }
                             .buttonStyle(.borderedProminent).disabled(library.unprocessedPhotos.isEmpty || library.isBusy)
-                        Text("明确去留由模型处理").font(.caption).foregroundStyle(.secondary)
+                        Text(tr("明确去留由模型处理")).font(.caption).foregroundStyle(.secondary)
                         Spacer()
-                        Button("审核不确定项（\(library.uncertainPhotos.count)）") {
+                        Button(tr("审核不确定项（%@）", "\(library.uncertainPhotos.count)")) {
                             reviewSession = ReviewSession(assets: library.uncertainPhotos)
                         }.disabled(library.uncertainPhotos.isEmpty || library.isBusy)
                     }
                 }
                 if tab == .queue {
-                    TextField("删除理由（选填，也会记录为反馈）", text: $deleteReason).textFieldStyle(.roundedBorder)
-                    Text("这些照片仍在系统图库中。全部删除会同步至 iCloud 设备，并进入系统“最近删除”；复活只移出当前待删除队列。")
+                    TextField(tr("删除理由（选填，也会记录为反馈）"), text: $deleteReason).textFieldStyle(.roundedBorder)
+                    Text(tr("这些照片仍在系统图库中。全部删除会同步至 iCloud 设备，并进入系统“最近删除”；复活只移出当前待删除队列。"))
                         .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
                 } else {
-                    Text("云端照片会按需从 iCloud 下载。点击分析全部会将 768 像素预览及已保存反馈发送至你配置的视觉模型。")
+                    Text(tr("云端照片会按需从 iCloud 下载。点击分析全部会将 768 像素预览及已保存反馈发送至你配置的视觉模型。"))
                         .font(.caption).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
                 }
             }.padding(.horizontal, 32).padding(.vertical, 16)
 
-            if library.isLoading { Spacer(); ProgressView("正在读取图库…"); Spacer() }
+            if library.isLoading { Spacer(); ProgressView(tr("正在读取图库…")); Spacer() }
             else if visiblePhotos.isEmpty {
-                ContentUnavailableView(tab == .queue ? "没有待删除照片" : tab == .uncertain ? "没有需要你判断的照片" : "没有可显示的照片",
-                    systemImage: "photo.on.rectangle.angled", description: Text(tab == .uncertain ? "明确的去留已由模型处理。" : "分析结果会自动归入对应分区。"))
+                ContentUnavailableView(tab == .queue ? tr("没有待删除照片") : tab == .uncertain ? tr("没有需要你判断的照片") : tr("没有可显示的照片"),
+                    systemImage: "photo.on.rectangle.angled", description: Text(tab == .uncertain ? tr("明确的去留已由模型处理。") : tr("分析结果会自动归入对应分区。")))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
@@ -501,7 +518,7 @@ struct LibraryScreen: View {
                                     reviewSession = ReviewSession(assets: [asset])
                                 }
                                 if tab == .queue {
-                                    Toggle("选中复活", isOn: Binding(
+                                    Toggle(tr("选中复活"), isOn: Binding(
                                         get: { restoreSelection.contains(asset.localIdentifier) },
                                         set: { selected in
                                             if selected { restoreSelection.insert(asset.localIdentifier) }
@@ -512,7 +529,7 @@ struct LibraryScreen: View {
                                 Text(decisionLabel(asset.localIdentifier)).font(.callout.weight(.medium))
                                 if let review = library.reviews[asset.localIdentifier] {
                                     Text(review.advice.reason).font(.caption).foregroundStyle(.secondary).lineLimit(3)
-                                    Button("查看 / 修改决定") { reviewSession = ReviewSession(assets: [asset]) }.disabled(library.isBusy)
+                                    Button(tr("查看 / 修改决定")) { reviewSession = ReviewSession(assets: [asset]) }.disabled(library.isBusy)
                                 }
                             }
                         }
@@ -523,25 +540,25 @@ struct LibraryScreen: View {
     }
 
     private func decisionLabel(_ id: String) -> String {
-        if library.pendingDeletion.contains(id) { return "待删除" }
+        if library.pendingDeletion.contains(id) { return tr("待删除") }
         switch library.memory.decision(for: id) {
-        case .keep: return library.ownerDecisions[id] == .keep ? "你已保留" : "模型已保留"
-        case .uncertain: return "需要你判断"
-        case .cleanup: return "对比保留项，暂不删除"
-        case nil: return "尚未分析"
+        case .keep: return library.ownerDecisions[id] == .keep ? tr("你已保留") : tr("模型已保留")
+        case .uncertain: return tr("需要你判断")
+        case .cleanup: return tr("对比保留项，暂不删除")
+        case nil: return tr("尚未分析")
         }
     }
 
     private var permissionState: some View {
         VStack(spacing: 18) {
             Image(systemName: "photo.on.rectangle.angled").font(.system(size: 34)).foregroundStyle(DesignTokens.accent)
-            Text("连接你的照片图库").font(.title2.bold())
-            Text("读取最近 100 张照片，模型处理明确去留，你只需判断不确定项。最终删除由你在待删除图库中执行。")
+            Text(tr("连接你的照片图库")).font(.title2.bold())
+            Text(tr("读取最近 100 张照片，模型处理明确去留，你只需判断不确定项。最终删除由你在待删除图库中执行。"))
                 .foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 400)
             if library.authorization == .notDetermined {
-                Button("允许访问照片") { library.requestAccess() }.buttonStyle(.borderedProminent).disabled(library.isLoading)
+                Button(tr("允许访问照片")) { library.requestAccess() }.buttonStyle(.borderedProminent).disabled(library.isLoading)
             } else {
-                Button("打开照片权限设置") {
+                Button(tr("打开照片权限设置")) {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos") { NSWorkspace.shared.open(url) }
                 }
             }
@@ -558,6 +575,7 @@ struct LibraryScreen: View {
 }
 
 struct PhotoCard: View {
+    @AppStorage(L10n.languageKey) private var appLanguage = "system"
     let asset: PHAsset
     let index: Int
     @State private var image: NSImage?
@@ -571,11 +589,12 @@ struct PhotoCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Button(action: open) { card }.buttonStyle(.plain).disabled(disabled)
-                .accessibilityLabel(accessibilityDescription).help("查看照片和理由")
+                .accessibilityLabel(accessibilityDescription).help(tr("查看照片和理由"))
             if loadError != nil {
-                Button("重试读取照片") { attempt += 1 }.disabled(disabled)
+                Button(tr("重试读取照片")) { attempt += 1 }.disabled(disabled)
             }
         }
+        .environment(\.locale, L10n.locale(for: appLanguage))
         .task(id: attempt) {
             let currentAttempt = attempt
             loading = true; loadError = nil; downloadProgress = nil
@@ -609,11 +628,11 @@ struct PhotoCard: View {
                                 if loading {
                                     if let downloadProgress {
                                         ProgressView(value: downloadProgress)
-                                        Text("iCloud 下载 \(Int(downloadProgress * 100))%").font(.caption)
-                                    } else { ProgressView("正在读取…").controlSize(.small) }
+                                        Text(tr("iCloud 下载 %@%%", "\(Int(downloadProgress * 100))")).font(.caption)
+                                    } else { ProgressView(tr("正在读取…")).controlSize(.small) }
                                 } else {
                                     Image(systemName: "icloud.slash").font(.system(size: 25, weight: .light))
-                                    Text("读取失败，请重试").font(.caption).multilineTextAlignment(.center).help(loadError ?? "照片暂不可用")
+                                    Text(tr("读取失败，请重试")).font(.caption).multilineTextAlignment(.center).help(loadError ?? tr("照片暂不可用"))
                                 }
                             }.foregroundStyle(DesignTokens.secondaryText).padding(16)
                         }
@@ -654,14 +673,14 @@ struct PhotoCard: View {
     }
 
     private var accessibilityDescription: String {
-        let details = "照片 \(index)，\(dateLabel)，\(asset.pixelWidth) 乘 \(asset.pixelHeight) 像素"
-        if let downloadProgress, loading { return "\(details)，iCloud 下载 \(Int(downloadProgress * 100))%" }
-        if let loadError { return "\(details)，读取失败：\(loadError)" }
+        let details = tr("照片 %@，%@，%@ 乘 %@ 像素", "\(index)", "\(dateLabel)", "\(asset.pixelWidth)", "\(asset.pixelHeight)")
+        if let downloadProgress, loading { return tr("%@，iCloud 下载 %@%%", "\(details)", "\(Int(downloadProgress * 100))") }
+        if let loadError { return tr("%@，读取失败：%@", "\(details)", "\(loadError)") }
         return details
     }
 
     private var dateLabel: String {
-        asset.creationDate?.formatted(.dateTime.year().month(.abbreviated).day()) ?? "拍摄时间未知"
+        asset.creationDate?.formatted(.dateTime.year().month(.abbreviated).day().locale(L10n.locale())) ?? tr("拍摄时间未知")
     }
 
 

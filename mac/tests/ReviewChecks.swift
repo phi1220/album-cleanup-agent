@@ -6,7 +6,14 @@ import Photos
 @main
 struct ReviewChecks {
     @MainActor static func main() async throws {
-        var checks = try await checkPreferenceLearning()
+        let savedLanguage = UserDefaults.standard.object(forKey: L10n.languageKey)
+        defer {
+            if let savedLanguage { UserDefaults.standard.set(savedLanguage, forKey: L10n.languageKey) }
+            else { UserDefaults.standard.removeObject(forKey: L10n.languageKey) }
+        }
+        var checks = try checkLocalization()
+        UserDefaults.standard.set("zh-Hans", forKey: L10n.languageKey)
+        checks += try await checkPreferenceLearning()
         func rejects(_ name: String, _ operation: () throws -> Void) {
             do { try operation(); fatalError("Unexpected acceptance: \(name)") }
             catch { checks += 1 }

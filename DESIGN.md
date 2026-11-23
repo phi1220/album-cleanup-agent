@@ -36,7 +36,7 @@ Treat the library as a photographer's contact sheet: photographs carry the color
 
 - **Audience and primary job:** People reviewing their own photo library and deciding what to keep, with actual model advice and deliberate deletion review.
 - **Target market(s) and evidence:** Mac-first, with Chinese UI copy for the current user context; no broader market assumption is encoded.
-- **Locale(s) and language policy:** Simplified Chinese interface; dates use the macOS locale and local timezone. Keep measurements and dates system-formatted.
+- **Locale(s) and language policy:** Simplified Chinese and English interfaces. A native language picker offers Follow System, 简体中文 and English; dates follow the selected language while retaining the local timezone. Existing user/model content stays in its original language.
 - **Usage scene:** A resizable desktop window for deliberate, visual review rather than rapid bulk operations.
 - **Register:** Product.
 - **Memorable signature:** A narrow ochre registration edge next to each photo's date and pixel dimensions.
@@ -50,7 +50,7 @@ The indigo `primary` is the native action and keyboard-focus accent. The ochre `
 
 ## Typography
 
-Use the system San Francisco family for interface copy and SF Mono for dates, indices, and pixel dimensions. Keep Chinese labels in native system fonts so macOS selects the correct CJK fallback. Use sentence-style Chinese labels and rely on system-formatted dates.
+Use the system San Francisco family for interface copy and SF Mono for dates, indices, and pixel dimensions. Keep Chinese labels in native system fonts so macOS selects the correct CJK fallback. Use concise native Chinese and English labels, with dates formatted for the active interface locale. Allow English help text to wrap without clipping controls.
 
 ## Layout
 
@@ -117,3 +117,5 @@ Keep and delete use `DesignTokens.keep` / `DesignTokens.delete`, mapped to #1B6E
 - **Don't:** Infer a cleanup recommendation from the grid or from missing metadata.
 - **Don't:** imply Photos assets have ordinary filesystem paths or that a model recommendation is deletion authorization.
 - **Don't:** claim the feedback prompt trains model weights or demonstrates measured self-improvement.
+
+Language ownership: `mac/Localization.swift` resolves the persisted language and native `.lproj` resources in `mac/Resources/`. All app-owned labels, progress, errors and accessibility copy share this owner. SwiftUI native pickers own popup geometry and keyboard behavior. Language changes preserve the window model, review state and entered reasons; system-owned menus/dialogs follow macOS language settings. Existing saved system reports are translated for display without rewriting feedback or records.
