@@ -1,7 +1,11 @@
 .album-agent/
+.build/
 __pycache__/
+*.py[cod]
 .venv/
 album-agent-smoke-*/
 .env
+.env.*
+!.env.example
 testphotos/
 .DS_Store

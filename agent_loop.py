@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
 
 from album_core import photo_evidence, recommend
 from semantic_preferences import prompt as semantic_prompt, validate_rule
@@ -22,10 +21,6 @@ TOOLS = {
         }},
     },
 }
-
-
-class Planner(Protocol):
-    def next_action(self, request: dict) -> dict: ...
 
 
 class JsonPlanner:

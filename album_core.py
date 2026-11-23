@@ -1,14 +1,13 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 import os
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Protocol
-from urllib.request import Request, urlopen
-import base64
+from urllib.request import Request
 
 from PIL import Image, ImageDraw, ImageFilter, ImageOps, ImageStat, UnidentifiedImageError
 
@@ -285,10 +284,6 @@ def contact_sheet(group, state):
         canvas.save(path)
         paths.append(path)
     return paths
-
-
-class Advisor(Protocol):
-    def advise(self, evidence: dict) -> dict: ...
 
 
 class JsonHttpAdvisor:
