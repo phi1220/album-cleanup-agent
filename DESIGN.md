@@ -100,6 +100,8 @@ Keychain remains the sole key store. Reviews, owner decisions and feedback survi
 
 ### Iconography
 
+The app icon uses an indigo rounded tile with overlapping ivory photo cards, a simple mountain and an ochre sun/folded corner. The displaced rear card suggests letting extra photos go. Keep it free of text, badges and deletion symbols so it stays legible at small sizes. `mac/Assets/AppIcon.png` is the raster master; the build uses native `sips` and `iconutil` to produce all macOS sizes as `Contents/Resources/AppIcon.icns`. The generation prompt is preserved beside the master. Interface glyphs continue to use native SF Symbols.
+
 Use SF Symbols at native weights. Every symbol-only state has adjacent text or an accessibility label. Cloud loading uses native progress plus a percentage; retry is a separate labeled button outside the photo-opening button, never a nested button.
 
 ### Motion
